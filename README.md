@@ -37,3 +37,6 @@ Import the Project
    PORT = 'port which you want to use it'
    SECRET_KEY = 'any word key to make token'
    ```
+## ERD 
+
+![ERD-Page-2 drawio](https://user-images.githubusercontent.com/92248041/145275527-6eced870-dc15-41bd-a7e9-cdbcc8181cbb.png)
