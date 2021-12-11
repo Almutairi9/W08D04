@@ -6,6 +6,7 @@ const {
     updateComments,
     getDeletedComments,
     getAllComments,
+    delComments,
 } = require("./../controller/comments");
 const authentication = require("../Middelware/Authentication");
 const authorization = require("./../Middelware/authorization");
@@ -17,6 +18,8 @@ commentsRouter.get("/comments", authentication, getAllComments);
 commentsRouter.get("/deletedComments", authentication, getDeletedComments);
 commentsRouter.get("/comments/:id", authentication, getOneComments);  
 commentsRouter.put("/comments/:id", authentication, updateComments); 
-commentsRouter.delete("/comments/:id", authentication, authorization, deleteComments);
+commentsRouter.delete("/comments/:id", authentication, deleteComments);
 
+// Admin .....
+commentsRouter.delete("/delcomments/:id", authentication, authorization, delComments);
 module.exports = commentsRouter;

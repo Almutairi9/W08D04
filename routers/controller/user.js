@@ -12,13 +12,14 @@ const signup = async (req, res) => {
   const { email, password, userName, pic, role } = req.body;
 
   const lowerCaseEmail = email.toLowerCase();
+  const lowerCaseuserName = userName.toLowerCase();
   const hashedPassword = await bcrypt.hash(password, SALT);
 
   const newUser = new usersModel({
     email: lowerCaseEmail,
     password: hashedPassword,
+    userName :lowerCaseuserName, 
     role,
-    userName,
     pic,
   });
 
@@ -32,23 +33,41 @@ const signup = async (req, res) => {
     });
 };
 
+const verifyAccount = async (req, res) => {
+  const { id, code } = req.body;
+
+  const user = await usersModel.findOne({ _id: id });
+
+  if (user.activeCode == code) {
+    usersModel
+      .findByIdAndUpdate(id, { active: true, activeCode: "" }, { new: true })
+      .then((result) => {
+        res.status(200).json(result);
+      })
+      .catch((error) => {
+        res.status(400).json(error);
+      });
+  } else {
+    res.status(400).json("Wrong code..");
+  }
+};
+
 const login = (req, res) => {
-  const { email, userName, password } = req.body;
-  let lowerCaseEmail;
-  if(email){
-   lowerCaseEmail = email.toLowerCase();
-} 
+  const { userRegister, password } = req.body;
+
+   const userRegisterTo = userRegister.toLowerCase();
    
   usersModel
-    .findOne({ $or: [{ email }, { userName }] })
+    .findOne({ $or: [{ userName: userRegister } , { email: userRegister }] ,
+    })
     .populate("role")
     .then(async (result) => {
       console.log(result);
       if (result) {
         if (result.deleted === false) {
-          console.log(result.userName == userName);
-          console.log(result.email == lowerCaseEmail);
-          if ( result.userName == userName || result.email == lowerCaseEmail  ) {
+          // console.log(result.userName == userRegisterTo);
+          // console.log(result.email == userRegisterTo);
+          if ( result.userName == userRegisterTo || result.email == userRegisterTo  ) {
             console.log("result");
             const matchedPassword = await bcrypt.compare(
               password,
@@ -59,7 +78,7 @@ const login = (req, res) => {
               const payload = {
                 id: result._id,
                 email: result.email,
-                role: result.role,
+                role: result.role.role,
                 userName: result.userName,
                 deleted: result.deleted,
               };
@@ -132,4 +151,4 @@ const deleteUser = (req, res) => {
 };
 
 
-module.exports = { signup, login, getUsers, deleteUser };
+module.exports = { signup, login, getUsers, deleteUser ,verifyAccount};

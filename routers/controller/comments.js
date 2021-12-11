@@ -1,5 +1,6 @@
 const commentsModel = require("../../db/models/comment");
 const postModel = require("../../db/models/post");
+const roleModel = require("./../../db/models/role");
 
 //Done 
 const createComments = (req, res) => {
@@ -89,8 +90,8 @@ const getDeletedComments = (req, res) => {
 
 const deleteComments = (req, res) => {
   if (!req.token.deleted) {
-    const { id } = req.params;
-
+    const { id } = req.params; // comment id ..
+  
     commentsModel
       .findOneAndUpdate(
         { _id: id, user: req.token.id, deleted: false },
@@ -112,15 +113,64 @@ const deleteComments = (req, res) => {
   }
 };
 
+const delComments = (req, res) => {
+  if (!req.token.deleted) {
+    const { id } = req.params; // comment id ..
+  
+    commentsModel
+      .findOneAndUpdate(
+        { _id: id, user: req.token.id, deleted: false },
+        { deleted: true },
+        { new: true }
+      )
+      .then((result) => {
+        if (result) {
+          res.status(200).json(result);
+        } else {
+          res.status(404).json({ message: `there is no task with ID: ${id}` });
+        }
+      })
+      .catch((err) => {
+        res.status(400).json(err);
+      });
+  } else {
+    res.status(404).json({ message: "your user is deleted" });
+  }
+};
+// const deleteComments = async (req, res) => {
+//   const { _id } = req.body;
+//   const reqUserId = req.token.id; //user
+//   const userId = req.token.role;
+//   const Result = await roleModel.findById(userId); //admin -- Result.role =="adimn"
+//   const Result2 = await commentsModel.findById(_id).populate("post"); //post owner -- Result2.onPost.postedBy
+//   const Result3 = await commentsModel.findById(_id); // comment owner
+//   if (
+//     Result.role == "adimn" ||
+//     Result2.post.user == reqUserId ||
+//     Result3.by == reqUserId
+//   ) {
+//     commentsModel.deleteOne({ _id }, function (err, result) {
+//       if (err) return handleError(err);
+//       if (result.deletedCount !== 0) {
+//         return res.status(200).json("deleted");
+//       } else {
+//         return res.status(404).json("not found");
+//       }
+//     });
+//   } else {
+//     return res.status(403).json({ message: "forbidden" });
+//   }
+// };
+//Done 
 const updateComments = (req, res) => {
   if (!req.token.deleted) {
     const { id } = req.params;
-    const { pic, description } = req.body;
+    const { description } = req.body;
 
     commentsModel
       .findOneAndUpdate(
         { _id: id, user: req.token.id, deleted: false }, // filters
-        { pic: pic, description: description },
+        { description: description },
         { new: true }
       )
       .then((result) => {
@@ -145,4 +195,5 @@ module.exports = {
   updateComments,
   getDeletedComments,
   getAllComments,
-};
+  delComments,
+}; 

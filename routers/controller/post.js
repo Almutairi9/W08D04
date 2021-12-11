@@ -10,7 +10,7 @@ const createPosts = (req, res) => {
     const newPost = new postModel({
       pic,
       description,
-      user: req.token.id,
+      user: req.token.id, 
     });
 
     newPost
@@ -61,7 +61,7 @@ const getOnePosts = (req, res) => {
 const getAllPosts = (req, res) => {
   if (!req.token.deleted) {
     postModel
-      .find({ user: req.token.id, deleted: false })
+      .find({  deleted: false })
       .then((result) => {
         if (result.length > 0) {
           res.status(200).json(result);
@@ -136,7 +136,7 @@ const updatePosts = (req, res) => {
         if (result) {
           res.status(200).json(result);
         } else {
-          res.status(404).json({ message: `there is no task with ID: ${id}` });
+          res.status(404).json({ message: `there is no comment with ID: ${id}` });
         }
       })
       .catch((err) => {
@@ -178,6 +178,31 @@ const newLike = (req, res) => {
   }
 };
 
+// Admin
+ const deletePostsByAdmin = (req, res) => {
+  if (!req.token.deleted) {
+    const { id } = req.params;
+
+    todosModel
+      .findOneAndUpdate(
+        { _id: id, deleted: false },
+        { deleted: true },
+        { new: true }
+      )
+      .then((result) => {
+        if (result) {
+          res.status(200).json(result);
+        } else {
+          res.status(404).json({ message: `there is no task with ID: ${id}` });
+        }
+      })
+      .catch((err) => {
+        res.status(400).json(err);
+      });
+  } else {
+    res.status(404).json({ message: "your user is deleted" });
+  }
+};
 module.exports = {
   createPosts,
   getOnePosts,
@@ -186,4 +211,5 @@ module.exports = {
   getDeletedPosts,
   getAllPosts,
   newLike, 
-};
+  deletePostsByAdmin,
+}; 
