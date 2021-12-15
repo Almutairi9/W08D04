@@ -1,31 +1,33 @@
 const likeModle = require("./../../db/models/like");
 
-const newLike = (req, res) => {
-  const { id } = req.params; // post id 
+const newLike = async (req, res) => {
+  const { id } = req.params; // post id
+  console.log(id);
   try {
-    likeModle
-      .findOneAndDelete({
-        $and: [{ post: id }, { user: req.token.id }],
-      })
-      .then((result) => {
-        if (result) {
-          res.status(200).json("unliked successfuly");
-        } else {
-          const newLike = new likeModle({
-            post: id,
-            user: req.token.id,
-          });
-
-          newLike
-            .save()
-            .then((result) => {
-              res.status(201).json(result);
-            })
-            .catch((err) => {
-              res.status(404).json(err);
-            });
-        }
+    const like = await likeModle.findOne({
+      post: id,
+      user: req.token.id,
+    });
+    console.log(like);
+    if (like) {
+      likeModle.findOneAndDelete({ post: id }).then((result) => {
+        res.status(200).json("unliked successfuly");
       });
+    } else {
+      const newLike = new likeModle({
+        post: id,
+        user: req.token.id,
+      });
+
+      newLike
+        .save()
+        .then((result) => {
+          res.status(201).json(result);
+        })
+        .catch((err) => {
+          res.status(404).json(err);
+        });
+    }
   } catch (error) {
     res.status(404).json(error.message);
   }
@@ -34,34 +36,6 @@ const newLike = (req, res) => {
 module.exports = {
   newLike,
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 // const createLike = (req, res) => {
 //   if (!req.token.deleted) {

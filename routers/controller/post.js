@@ -4,7 +4,6 @@ const likeModle = require("./../../db/models/like");
 
 //Done
 const createPosts = (req, res) => {
-  if (!req.token.deleted) {
     const { pic, description } = req.body;
 
     const newPost = new postModel({
@@ -21,9 +20,6 @@ const createPosts = (req, res) => {
       .catch((err) => {
         res.status(400).json(err);
       });
-  } else {
-    res.status(404).json({ message: "your user is deleted .." });
-  }
 };
 //Done
 const getOnePosts = (req, res) => {
@@ -31,7 +27,7 @@ const getOnePosts = (req, res) => {
     const { id } = req.params; //Post id 
 // console.log(req.token.id);
     postModel
-      .findOne({ _id: id, user: req.token.id, deleted: false })
+      .findOne({ _id: id, deleted: false })
       .then(async (result) => {
         if (result) {
           const commnet = await commentsModel.find({ post:id , deleted: false })
@@ -42,7 +38,7 @@ const getOnePosts = (req, res) => {
           }
           else{
           // console.log("mmmm");
-          res.status(200).json({result });
+          res.status(200).json({result, like });
           }
         } else {
           res
@@ -147,32 +143,34 @@ const updatePosts = (req, res) => {
   }
 };
 
-const newLike = (req, res) => {
-  const { id } = req.params; // post id 
+const newLike = async (req, res) => {
+  const { id } = req.params; // post id
+  console.log(id);
   try {
-    likeModle
-      .findOneAndDelete({
-        $and: [{ post: id }, { user: req.token.id }],
-      })
-      .then((result) => {
-        if (result) {
-          res.status(200).json("unliked successfuly");
-        } else {
-          const newLike = new likeModle({
-            post: id,
-            user: req.token.id,
-          });
-
-          newLike
-            .save()
-            .then((result) => {
-              res.status(201).json(result);
-            })
-            .catch((err) => {
-              res.status(404).json(err);
-            });
-        }
+    const like = await likeModle.findOne({
+      post: id,
+      user: req.token.id,
+    });
+    console.log(like);
+    if (like) {
+      likeModle.findOneAndDelete({ post: id }).then((result) => {
+        res.status(200).json("unliked successfuly");
       });
+    } else {
+      const newLike = new likeModle({
+        post: id,
+        user: req.token.id,
+      });
+
+      newLike
+        .save()
+        .then((result) => {
+          res.status(201).json(result);
+        })
+        .catch((err) => {
+          res.status(404).json(err);
+        });
+    }
   } catch (error) {
     res.status(404).json(error.message);
   }
@@ -203,6 +201,7 @@ const newLike = (req, res) => {
     res.status(404).json({ message: "your user is deleted" });
   }
 };
+
 module.exports = {
   createPosts,
   getOnePosts,
@@ -213,3 +212,36 @@ module.exports = {
   newLike, 
   deletePostsByAdmin,
 }; 
+
+
+// const newLike = (req, res) => {
+//   const { id } = req.params; // post id 
+//   try {
+//     ///, { user: req.token.id }
+//     likeModle 
+//       .findOneAndDelete({
+//         $and: [{ post: id }],
+//       })
+//       .then((result) => {
+//         if (result) {
+//           res.status(200).json("unliked successfuly");
+//         } else {
+//           const newLike = new likeModle({
+//             post: id,
+//             // user: req.token.id,
+//           });
+
+//           newLike
+//             .save()
+//             .then((result) => {
+//               res.status(201).json(result);
+//             })
+//             .catch((err) => {
+//               res.status(404).json(err);
+//             });
+//         }
+//       });
+//   } catch (error) {
+//     res.status(404).json(error.message);
+//   }
+// };

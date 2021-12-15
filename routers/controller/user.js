@@ -3,34 +3,84 @@ const usersModel = require("./../../db/models/user");
 const dotenv = require("dotenv");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const nodemailer = require("nodemailer");
+
 dotenv.config();
 
 const SALT = Number(process.env.SALT);
 const SECRET = process.env.SECRET_KEY;
+
+const transport = nodemailer.createTransport({
+  host: "smtp.ethereal.email",
+  port: 587,
+  secure: false, // true for 465, false for other ports
+  service: "Gmail",
+  auth: {
+    // user: process.env.EMAIL,
+    // pass: process.env.EMAIL_PASSWORD,
+    user: "rawan90f@gmail.com",
+    password: "0555080894",
+  },
+});
 
 const signup = async (req, res) => {
   const { email, password, userName, pic, role } = req.body;
 
   const lowerCaseEmail = email.toLowerCase();
   const lowerCaseuserName = userName.toLowerCase();
-  const hashedPassword = await bcrypt.hash(password, SALT);
 
-  const newUser = new usersModel({
-    email: lowerCaseEmail,
-    password: hashedPassword,
-    userName :lowerCaseuserName, 
-    role,
-    pic,
+  const userExists = await usersModel.findOne({
+    $or: [{ userName: lowerCaseuserName }, { email: lowerCaseEmail }],
   });
 
-  newUser
-    .save()
-    .then((result) => {
-      res.status(201).json(result);
-    })
-    .catch((err) => {
-      res.status(400).json(err);
+  if (!userExists) {
+    //// ERROR userExists is not defined...................
+    const hashedPassword = await bcrypt.hash(password, SALT);
+
+    let activeCode = "";
+    const characters = "0123456789";
+    for (let i = 0; i < 4; i++) {
+      activeCode += characters.charAt(
+        Math.floor(Math.random() * characters.length)
+      );
+    }
+
+    const newUser = new usersModel({
+      email: lowerCaseEmail,
+      password: hashedPassword,
+      userName: lowerCaseuserName,
+      passwordCode: "",
+      activeCode,
+      role,
+      pic,
     });
+
+    newUser
+      .save()
+      .then((result) => {
+        transport
+          .sendMail({
+            from: process.env.EMAIL,
+            to: lowerCaseEmail,
+            subject: "change Your Password",
+            html: `<h1>change Your Password</h1>
+            <h2> Hi Dear : ${result.userName}</h2>
+            <h4> Your CODE is : ${passwordCode}</h4>
+            <p>Please enter your code on the following link and change your password</p>
+            <a href=Linke ${result._id}> Click here</a> 
+            </div>`,
+          })
+          .catch((err) => console.log(err));
+        res.status(201).json(result);
+      })
+      .catch((err) => {
+        res.status(400).json(err);
+      });
+  } else {
+    res.json({
+      message: "Email or Username already taken!",
+    });
+  }
 };
 
 const verifyAccount = async (req, res) => {
@@ -48,18 +98,81 @@ const verifyAccount = async (req, res) => {
         res.status(400).json(error);
       });
   } else {
-    res.status(400).json("Wrong code..");
+    res.status(400).json("the code is Wrong ! ..");
   }
 };
 
+const verifyEmail = async (req, res) => {
+  const { email } = req.body;
+
+  const user = await usersModel.findOne({ email });
+
+  if (user) {
+    let passwordCode = "";
+    const characters = "0123456789";
+    for (let i = 0; i < 4; i++) {
+      passwordCode += characters.charAt(
+        Math.floor(Math.random() * characters.length)
+      );
+    }
+
+    usersModel
+      .findByIdAndUpdate(user._id, { passwordCode }, { new: true })
+      .then((result) => {
+        transport
+          .sendMail({
+            from: process.env.EMAIL, 
+            to: result.email,
+            subject: "change Your Password",
+            html: `<h1>change Your Password</h1>
+            <h2> Hi Dear : ${result.userName}</h2>
+            <h4> Your CODE is : ${passwordCode}</h4>
+            <p>Please enter your code on the following link and change your password</p>
+            <a href=Linke ${result._id}> Click here</a> 
+            </div>`,
+          })
+          .catch((err) => console.log(err));
+        res.status(200).json(result);
+      })
+      .catch((error) => {
+        res.status(400).json(error);
+      });
+  } else {
+    res.status(400).json("No user with this email");
+  }
+};
+
+const resetPassword = async (req, res) => {
+  const { id, code, password } = req.body;
+
+  const user = await usersModel.findOne({ _id: id });
+
+  if (user.passwordCode == code) {
+    const hashedPassword = await bcrypt.hash(password, SALT);
+
+    usersModel
+      .findByIdAndUpdate(
+        id,
+        { password: hashedPassword, passwordCode: "" },
+        { new: true }
+      )
+      .then((result) => {
+        res.status(200).json(result);
+      })
+      .catch((error) => {
+        res.status(400).json(error);
+      });
+  } else {
+    res.status(400).json("the Code is Wrong ! ");
+  }
+};
 const login = (req, res) => {
   const { userRegister, password } = req.body;
 
-   const userRegisterTo = userRegister.toLowerCase();
-   
+  const userRegisterTo = userRegister.toLowerCase();
+
   usersModel
-    .findOne({ $or: [{ userName: userRegister } , { email: userRegister }] ,
-    })
+    .findOne({ $or: [{ userName: userRegister }, { email: userRegister }] })
     .populate("role")
     .then(async (result) => {
       console.log(result);
@@ -67,7 +180,10 @@ const login = (req, res) => {
         if (result.deleted === false) {
           // console.log(result.userName == userRegisterTo);
           // console.log(result.email == userRegisterTo);
-          if ( result.userName == userRegisterTo || result.email == userRegisterTo  ) {
+          if (
+            result.userName == userRegisterTo ||
+            result.email == userRegisterTo
+          ) {
             console.log("result");
             const matchedPassword = await bcrypt.compare(
               password,
@@ -150,5 +266,12 @@ const deleteUser = (req, res) => {
   }
 };
 
-
-module.exports = { signup, login, getUsers, deleteUser ,verifyAccount};
+module.exports = {
+  signup,
+  login,
+  getUsers,
+  deleteUser,
+  verifyAccount,
+  verifyEmail,
+  resetPassword,
+};

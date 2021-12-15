@@ -6,14 +6,14 @@ const roleModel = require("./../../db/models/role");
 const createComments = (req, res) => {
   if (!req.token.deleted) {
     const { id } = req.params; // post id 
-    const { description } = req.body;
+    const { comment } = req.body;
 
     const newComment = new commentsModel({
-      description,
+      comment,
       user: req.token.id,
       post : id, 
     });
-
+ 
     newComment
       .save()
       .then((result) => {
@@ -29,10 +29,10 @@ const createComments = (req, res) => {
 //Done
 const getOneComments = (req, res) => {
   if (!req.token.deleted) {
-    const { id } = req.params; // comment id 
-
+    const { id } = req.params; // comment id user: req.token.id,
+ 
     commentsModel
-      .findOne({ _id: id, user: req.token.id, deleted: false })
+      .findOne({ _id: id, deleted: false })
       .then((result) => {
         if (result) {
           res.status(200).json(result);
@@ -165,12 +165,12 @@ const delComments = (req, res) => {
 const updateComments = (req, res) => {
   if (!req.token.deleted) {
     const { id } = req.params;
-    const { description } = req.body;
+    const { comment } = req.body;
 
     commentsModel
       .findOneAndUpdate(
         { _id: id, user: req.token.id, deleted: false }, // filters
-        { description: description },
+        { comment: comment },
         { new: true }
       )
       .then((result) => {
